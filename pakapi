@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+
+from makapi import makapi
+import os
+import sys
+import re
+import json
+
+
+# usage
+def usage(ret):
+    print(
+        f'Usage: {CMD} METHOD API ''{ payload }\n\n'
+        '  METHOD ... get / put / post / delete\n'
+        '  API ...... \'/api/v0/\' is not need. See https://mackerel.io/ja/api-docs/ \n'
+        '  payload .. specify Input as JSON format\n\n'
+        f'Example: {CMD} get org\n'
+        f'         {CMD} post hosts/<hostId>/status ''\'{"status":"standby"}\'\n'
+        f'         {CMD} help',
+        file=sys.stderr
+    )
+    sys.exit(ret)
+
+
+# エラーメッセージ出力しつつ終了
+def error_abort(msg):
+    print(f'* ERROR: {msg}', file=sys.stderr)
+    sys.exit(-1)
+
+
+# API キーは環境変数 MACKEREL_APIKEY から
+mackerel_apikey = os.environ.get('MACKEREL_APIKEY')
+
+# 引数取得
+args = sys.argv
+CMD = re.sub(r'^.*/', '', args.pop(0))
+
+if len(args) < 2:
+    # 引数が足りなければusage表示
+    usage(-1)
+
+# API キー未設定なら終了
+if not mackerel_apikey:
+    error_abort('MACKEREL_APIKEY is not set.')
+
+m = makapi(mackerel_apikey)
+
+if not m.organization_name:
+    # 名前が返ってこなかったら失敗
+    error_abort(m.message)
+
+[method, api] = args[0:2]
+if method == "get":
+    # 参照 API
+    if api == "org":
+        # 既に取得済みなので API を叩かずに返す
+        ret = {"name": m.organization_name}
+    else:
+        ret = m.get(api)
+else:
+    # 破壊的 API
+    print(
+        f'* Organization name: {m.organization_name}',
+        file=sys.stderr
+    )
+    # TODO: YN プロンプト表示
+
+    if method == "post":
+        # POST時だけペイロード指定が必要
+        ret = m.post(api, args[2])
+    elif method == "put":
+        ret = m.put(api)
+    elif method == "delete":
+        ret = m.delete(api)
+    else:
+        # 指定されたメソッドがおかしい
+        error_abort(
+            'METHOD must be one of "get", "put", "post" and "delete".'
+        )
+
+    # JSON で出力
+    print(
+        json.dumps(ret, separators=(',', ':'))
+    )
