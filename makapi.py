@@ -7,6 +7,7 @@ class makapi:
     # Mackerel API
     def __init__(self, mackerel_apikey):
         self.api_endpoint = mackerel_api_endpoint_base + '/api/v0'
+        self.organization_name = None
         self.headers = {
             'Content-type': 'application/json',
             'X-Api-Key': mackerel_apikey,
@@ -15,7 +16,6 @@ class makapi:
         r = self.get('org')
         if "error" in r:
             # APIキーが誤っていた場合はメッセージを返す
-            self.organization_name = None
             self.message = r['error']
         else:
             self.organization_name = r['name']
@@ -24,10 +24,14 @@ class makapi:
         return f'{self.api_endpoint}/{api}'
 
     def get(self, api):
-        ret = requests.get(
-            self.build_url(api),
-            headers=self.headers,
-        ).json()
+        if api == "org" and self.organization_name:
+            # 既に取得済みなので API を叩かずに返す
+            ret = {"name": self.organization_name}
+        else:
+            ret = requests.get(
+                self.build_url(api),
+                headers=self.headers,
+            ).json()
         return ret
 
     def post(self, api, payloads):
@@ -51,25 +55,3 @@ class makapi:
             headers=self.headers,
         ).json()
         return ret
-
-
-"""
-確認用
-"""
-if __name__ == '__main__':
-    import os
-
-    # Mackerel APIテスト（MACKEREL_APIKEYが設定されていたときのみ）
-    mackerel_apikey = os.environ.get('MACKEREL_APIKEY')
-
-    if mackerel_apikey:
-        m = makapi(mackerel_apikey)
-        if m.organization_name:
-            print(f'Organization Name: {m.organization_name}')
-        else:
-            # 名前が返ってこなかったら失敗
-            print(f'Error: {m.message}')
-
-        # print(m.get("hosts"))
-    else:
-        print('MACKEREL_APIKEY is not set.')

@@ -23,8 +23,8 @@ def usage(ret):
 
 
 # エラーメッセージ出力しつつ終了
-def error_abort(msg):
-    print(f'* ERROR: {msg}', file=sys.stderr)
+def error_abort(message):
+    print(f'* ERROR: {message}', file=sys.stderr)
     sys.exit(-1)
 
 
@@ -52,11 +52,7 @@ if not m.organization_name:
 [method, api] = args[0:2]
 if method == "get":
     # 参照 API
-    if api == "org":
-        # 既に取得済みなので API を叩かずに返す
-        ret = {"name": m.organization_name}
-    else:
-        ret = m.get(api)
+    ret = m.get(api)
 else:
     # 破壊的 API
     print(
@@ -78,7 +74,7 @@ else:
             'METHOD must be one of "get", "put", "post" and "delete".'
         )
 
-    # JSON で出力
-    print(
-        json.dumps(ret, separators=(',', ':'))
-    )
+# JSON で出力
+print(
+    json.dumps(ret, separators=(',', ':'))
+)
